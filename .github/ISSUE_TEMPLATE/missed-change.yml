@@ -1,0 +1,33 @@
+name: Missed breaking change
+description: SpecDrift did not flag a change that breaks clients
+labels: [rule, bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting — a minimal reproduction is worth more than a full spec.
+  - type: textarea
+    id: before
+    attributes:
+      label: Before fragment
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: after
+    attributes:
+      label: After fragment
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should be reported
+      description: Which severity, and why an existing client breaks.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: SpecDrift version
+      placeholder: 0.1.0

@@ -1,0 +1,97 @@
+name: 'SpecDrift'
+description: 'Fail a pull request when an OpenAPI spec change breaks existing clients.'
+author: 'Dawood Ur Rehman'
+
+branding:
+  icon: 'git-pull-request'
+  color: 'green'
+
+inputs:
+  before:
+    description: 'Path to the committed (current) OpenAPI document.'
+    required: true
+  after:
+    description: 'Path to the proposed OpenAPI document.'
+    required: true
+  fail-on:
+    description: 'Lowest severity that fails the build: breaking | additive | cosmetic | none.'
+    required: false
+    default: 'breaking'
+  from-version:
+    description: 'Current released version, used to suggest the next one (e.g. 2.3.1).'
+    required: false
+    default: ''
+  comment:
+    description: 'Post the changelog as a pull request comment (true/false).'
+    required: false
+    default: 'false'
+  github-token:
+    description: 'Token used to comment on the pull request.'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  exit-code:
+    description: '0 when no change at or above fail-on, 1 when it fails, 2 on a parse error.'
+    value: ${{ steps.drift.outputs.exit-code }}
+  summary:
+    description: 'One-line summary such as "3 breaking, 1 additive".'
+    value: ${{ steps.drift.outputs.summary }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Run SpecDrift
+      id: drift
+      shell: bash
+      env:
+        BEFORE: ${{ inputs.before }}
+        AFTER: ${{ inputs.after }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        FROM_VERSION: ${{ inputs.from-version }}
+      run: |
+        set +e
+        args=(--fail-on "$FAIL_ON" --json)
+        if [ -n "$FROM_VERSION" ]; then
+          args+=(--from-version "$FROM_VERSION")
+        fi
+        output=$(node "${{ github.action_path }}/packages/diff-core/bin/specdrift.js" "$BEFORE" "$AFTER" "${args[@]}")
+        code=$?
+        echo "$output" > drift.json
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        echo "$output" | node -e '
+          let raw = "";
+          process.stdin.on("data", (chunk) => { raw += chunk; });
+          process.stdin.on("end", () => {
+            try {
+              const result = JSON.parse(raw);
+              const { breaking, additive, cosmetic, total } = result.summary;
+              const line = `${breaking} breaking, ${additive} additive, ${cosmetic} cosmetic (${total} total) — suggested ${result.verdict.level} release`;
+              require("fs").appendFileSync(process.env.GITHUB_OUTPUT, `summary=${line}\n`);
+              require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## SpecDrift\n\n${line}\n\n${result.changelog}\n`);
+            } catch (error) {
+              require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, `SpecDrift could not parse its own output: ${error.message}\n`);
+            }
+          });
+        '
+        exit $code
+
+    - name: Comment on pull request
+      if: ${{ always() && inputs.comment == 'true' && github.event.pull_request.number }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+      run: |
+        node -e '
+          const fs = require("fs");
+          const result = JSON.parse(fs.readFileSync("drift.json", "utf8"));
+          fs.writeFileSync("comment.md", `<!-- specdrift -->\n${result.changelog}\n`);
+        '
+        gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file comment.md

@@ -1,0 +1,28 @@
+{
+  "name": "@specdrift/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "test": "vitest run",
+    "lint": "node --check src/app.js"
+  },
+  "dependencies": {
+    "@specdrift/diff-core": "*",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "express": "^4.22.3",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.3.0",
+    "mongoose": "^8.24.8",
+    "nanoid": "^5.0.9",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0",
+    "vitest": "^4.1.12"
+  }
+}
