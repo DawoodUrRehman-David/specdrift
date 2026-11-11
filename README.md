@@ -14,6 +14,9 @@ the **semver bump** your release needs, and a **changelog** a reviewer can read 
 
 </div>
 
+### [▶ Try it in the browser](https://trymuseai.im/apps/cb92c345d2663676/)
+Paste two specs, see the verdict. No clone, no install — the engine runs in the tab.
+
 ![SpecDrift explorer](docs/screenshots/explorer.png)
 
 ---
@@ -231,7 +234,8 @@ validation errors, unknown slugs, path traversal attempts, pagination bounds, an
 - OpenAPI **3.x** is the target. Swagger 2.0 documents parse and mostly work, but 2.0-only structures are not specifically modelled.
 - **Document-local `$ref` only.** External URL refs are left unresolved.
 - No moving of endpoints between paths, no `webhooks`, no `callbacks`.
-- The hosted demo is not deployed by me — self-host with the two commands above and it works offline.
+- The [hosted demo](https://trymuseai.im/apps/cb92c345d2663676/) runs the engine **in the browser**, so share links
+  are disabled there. Run the API locally (two commands above) to persist reports and get `/r/<slug>` links.
 
 ## Contributing
 

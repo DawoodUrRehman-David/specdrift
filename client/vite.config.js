@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // Relative asset paths so the build works both at the domain root and under
+  // a subpath such as /apps/<id>/.
+  base: './',
   server: {
     port: 5173,
     proxy: {

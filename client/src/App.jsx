@@ -4,6 +4,7 @@ import ChangeList from './components/ChangeList.jsx';
 import VerdictBar from './components/VerdictBar.jsx';
 import Changelog from './components/Changelog.jsx';
 import { getReport, listReports, postDiff, saveReport } from './lib/api.js';
+import { localDiff } from './lib/local-engine.js';
 import { sampleAfter, sampleBefore } from './lib/samples.js';
 
 const STORAGE_KEY = 'specdrift:last-run';
@@ -40,8 +41,14 @@ export default function App() {
       setError(null);
       setShare(null);
       setCopied(null);
+      const request = payload ?? { before, after, fromVersion: fromVersion || undefined };
       try {
-        const data = await postDiff(payload ?? { before, after, fromVersion: fromVersion || undefined });
+        // Prefer the API (it persists and can share); fall back to the in-tab engine
+        // so the static demo still works with no backend.
+        const data = await postDiff(request).catch((apiError) => {
+          if (apiError.code === 'network_error' || apiError.code === 'timeout') return localDiff(request);
+          throw apiError;
+        });
         setResult(data);
         setStatus('done');
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ fromVersion }));
@@ -219,7 +226,13 @@ export default function App() {
           placeholder="1.4.0"
         />
         <span className="spacer" />
-        <button className="btn" type="button" onClick={onShare} disabled={busy || Boolean(slugFromPath())}>
+        <button
+          className="btn"
+          type="button"
+          onClick={onShare}
+          disabled={busy || Boolean(slugFromPath()) || result?.local === true}
+          title={result?.local ? 'Share links need the API with MongoDB — run it locally to enable' : undefined}
+        >
           Save &amp; share link
         </button>
         <button
